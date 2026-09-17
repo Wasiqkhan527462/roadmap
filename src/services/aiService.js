@@ -129,7 +129,6 @@ function validateRoadmap(roadmap) {
 /** Make one completion API call and return parsed + validated roadmap JSON */
 async function callModel(baseURL, headers, model, topic, userProfile) {
   const useJsonMode = !NO_JSON_FORMAT.some(m => model.includes(m));
-  // Groq supports up to 32k completion tokens; OpenRouter free models are more limited
   const isGroq = baseURL.includes('groq');
 
   const payload = {
@@ -139,14 +138,14 @@ async function callModel(baseURL, headers, model, topic, userProfile) {
       { role: 'user',   content: buildUserPrompt(topic, userProfile) },
     ],
     temperature: 0.7,
-    max_tokens: isGroq ? 16000 : 8000,
+    max_tokens: isGroq ? 8000 : 8000,
     ...(useJsonMode ? { response_format: { type: 'json_object' } } : {}),
   };
 
   const response = await axios.post(
     `${baseURL}/chat/completions`,
     payload,
-    { headers, timeout: 90000 }
+    { headers, timeout: 120000 } // 120s timeout
   );
 
   const choice = response.data.choices?.[0];
@@ -176,6 +175,10 @@ async function callModel(baseURL, headers, model, topic, userProfile) {
 function handleApiError(err) {
   const status = err.response?.status;
   const apiMsg = err.response?.data?.error?.message || '';
+
+  if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+    throw new Error('Request timed out. The AI provider is experiencing high traffic. Please try again or switch to Llama 3.1 8B Instant in Settings.');
+  }
 
   if (status === 401) throw new Error('Invalid API key. Please check your credentials in Settings.');
   if (status === 402) throw new Error('This model requires credits. Switch to a free model in Settings.');
@@ -215,7 +218,7 @@ export async function testModel(provider, apiKey, modelId) {
 
 /**
  * Generate a personalized learning roadmap.
- * Auto-retries with a fallback model on empty/parse failures.
+ * Auto-retries with a fallback model on empty/parse/timeout failures.
  */
 export async function generateRoadmap(topic, userProfile, settings) {
   const { provider = 'groq', model } = settings;
@@ -228,17 +231,16 @@ export async function generateRoadmap(topic, userProfile, settings) {
   const fallbackModel = provider === 'groq' ? GROQ_FALLBACK : OR_FALLBACK;
   const headers       = buildHeaders(provider, apiKey);
 
-  const RETRYABLE = ['__parse_failed__', '__empty_response__'];
+  const isTimeoutErr = (err) => err.code === 'ECONNABORTED' || err.message?.includes('timeout');
+  const isRetryable = (err) =>
+    ['__parse_failed__', '__empty_response__', '__incomplete_roadmap__'].includes(err.message) || isTimeoutErr(err);
 
   // ── Primary attempt ──
   try {
     return await callModel(baseURL, headers, selectedModel, topic, userProfile);
   } catch (primaryErr) {
-    const isRetryable = RETRYABLE.includes(primaryErr.message);
-
-    // Auto-retry with fallback on empty/parse issues (but not on same model)
-    if (isRetryable && selectedModel !== fallbackModel) {
-      console.warn(`[Roadster] Primary model "${selectedModel}" failed (${primaryErr.message}). Retrying with "${fallbackModel}"…`);
+    if (isRetryable(primaryErr) && selectedModel !== fallbackModel) {
+      console.warn(`[Roadster] Primary model "${selectedModel}" failed (${primaryErr.message}). Auto-retrying with fallback model "${fallbackModel}"…`);
       try {
         return await callModel(baseURL, headers, fallbackModel, topic, userProfile);
       } catch (fallbackErr) {

@@ -238,7 +238,7 @@ export default function LandingPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
         >
-          {['Enter your topic', 'Answer 4 quick questions', 'Get your AI roadmap'].map((step, i) => (
+          {['Enter your topic', 'Answer 5 quick questions', 'Get your AI roadmap'].map((step, i) => (
             <div key={step} className="step-item">
               <div className="step-num">{i + 1}</div>
               <span className="step-text">{step}</span>

@@ -6,12 +6,10 @@ const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 
 // Default model options per provider — free-tier
 export const OPENROUTER_MODELS = [
-  { id: 'google/gemma-3-27b-it:free',        label: 'Gemma 3 27B (Free)',             free: true  },
-  { id: 'mistralai/mistral-7b-instruct:free', label: 'Mistral 7B (Free)',              free: true  },
-  { id: 'deepseek/deepseek-r1:free',          label: 'DeepSeek R1 (Free)',             free: true  },
-  { id: 'openrouter/auto',                    label: '✨ Auto Router (Best free)',      free: true  },
-  { id: 'meta-llama/llama-3.3-70b-instruct',  label: 'Llama 3.3 70B (Paid)',          free: false },
-  { id: 'qwen/qwen3-30b-a3b',                 label: 'Qwen3 30B (Paid)',              free: false },
+  { id: 'openrouter/auto',                   label: '✨ Auto Router (Recommended)', free: true  },
+  { id: 'google/gemma-2-9b-it:free',         label: 'Gemma 2 9B (Free)',            free: true  },
+  { id: 'deepseek/deepseek-r1:free',         label: 'DeepSeek R1 (Free)',            free: true  },
+  { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B (Paid)',         free: false },
 ];
 
 export const GROQ_MODELS = [
@@ -25,11 +23,10 @@ const NO_JSON_FORMAT = [
   'openrouter/auto',
   'deepseek/deepseek-r1',
   'mixtral-8x7b-32768',
-  'mistral-7b-instruct',
 ];
 
 // OpenRouter fallback for auto-retry on parse/empty failure
-const OR_FALLBACK = 'mistralai/mistral-7b-instruct:free';
+const OR_FALLBACK = 'openrouter/auto';
 // Groq fallback
 const GROQ_FALLBACK = 'llama-3.1-8b-instant';
 
@@ -226,8 +223,14 @@ export async function generateRoadmap(topic, userProfile, settings) {
 
   if (!apiKey) throw new Error('API key is required. Click "Add API Key" to configure.');
 
-  const baseURL       = provider === 'groq' ? GROQ_BASE_URL : OPENROUTER_BASE_URL;
-  const selectedModel = model || (provider === 'groq' ? GROQ_MODELS[0].id : OPENROUTER_MODELS[0].id);
+  const baseURL = provider === 'groq' ? GROQ_BASE_URL : OPENROUTER_BASE_URL;
+  let selectedModel = model || (provider === 'groq' ? GROQ_MODELS[0].id : OPENROUTER_MODELS[0].id);
+
+  // Auto-migrate legacy or deprecated models
+  if (selectedModel.includes('mistral') || selectedModel.includes('gemma-3')) {
+    selectedModel = provider === 'groq' ? GROQ_MODELS[0].id : OPENROUTER_MODELS[0].id;
+  }
+
   const fallbackModel = provider === 'groq' ? GROQ_FALLBACK : OR_FALLBACK;
   const headers       = buildHeaders(provider, apiKey);
 

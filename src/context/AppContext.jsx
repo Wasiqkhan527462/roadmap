@@ -27,7 +27,7 @@ export function AppProvider({ children }) {
   };
 
   // Bump this version whenever models or defaults change to clear stale caches
-  const SETTINGS_VERSION = 6;
+  const SETTINGS_VERSION = 7;
 
   // Settings stored in localStorage
   const [settings, setSettings] = useState(() => {

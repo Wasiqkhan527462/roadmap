@@ -161,6 +161,40 @@ function PhaseCard({ phase, index, isExpanded, onToggle }) {
   );
 }
 
+function computeTotalDuration(phases, fallbackDuration) {
+  if (!phases || !Array.isArray(phases) || phases.length === 0) {
+    return fallbackDuration || '—';
+  }
+
+  let totalWeeks = 0;
+  let parsedCount = 0;
+
+  phases.forEach(phase => {
+    if (!phase.duration) return;
+    const str = String(phase.duration).toLowerCase();
+    const wMatch = str.match(/(\d+)\s*week/);
+    const mMatch = str.match(/(\d+)\s*month/);
+
+    if (wMatch) {
+      totalWeeks += parseInt(wMatch[1], 10);
+      parsedCount++;
+    } else if (mMatch) {
+      totalWeeks += parseInt(mMatch[1], 10) * 4;
+      parsedCount++;
+    }
+  });
+
+  if (parsedCount === 0 || totalWeeks === 0) {
+    return fallbackDuration || '—';
+  }
+
+  if (totalWeeks < 8) {
+    return `${totalWeeks} weeks`;
+  }
+  const months = Math.round(totalWeeks / 4);
+  return `${months} months (${totalWeeks} weeks)`;
+}
+
 export default function RoadmapView() {
   const { roadmap, topic, userProfile, resetApp, setView } = useApp();
   const [expandedPhases, setExpandedPhases] = useState(new Set([1]));
@@ -175,6 +209,8 @@ export default function RoadmapView() {
       </div>
     );
   }
+
+  const calculatedTotalDuration = computeTotalDuration(roadmap.phases, roadmap.totalDuration);
 
   const togglePhase = (id) => {
     setExpandedPhases(prev => {
@@ -245,7 +281,7 @@ export default function RoadmapView() {
               <div className="stat-item">
                 <span className="stat-icon">📅</span>
                 <span className="stat-label">Total Duration</span>
-                <span className="stat-value">{roadmap.totalDuration}</span>
+                <span className="stat-value">{calculatedTotalDuration}</span>
               </div>
               <div className="stat-divider" />
               <div className="stat-item">

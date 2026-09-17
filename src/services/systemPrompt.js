@@ -9,10 +9,14 @@ CRITICAL INSTRUCTION: Your ENTIRE response must be ONE valid JSON object.
 - Start your response with { and end with }
 
 MANDATORY REQUIREMENT: You MUST generate a COMPLETE roadmap with EXACTLY 5 to 7 phases.
-- A phase covers 2-6 weeks of learning.
+- A phase covers 2-5 weeks of learning.
 - ALL phases must be fully written out — do not stop after the first phase.
 - Each phase must include: id, title, duration, description, icon, color, topics (3-6 items), resources (3-5 items), milestone, and project.
 - The phases array MUST contain between 5 and 7 objects. Fewer than 5 is unacceptable.
+
+DURATION STRICT CONSISTENCY:
+- The sum of all phase durations MUST match the overall totalDuration!
+- For example, if totalDuration is "6 months" (~24-26 weeks total), distribute those weeks across the 5-7 phases (e.g. 3-4 weeks per phase) so their total sum equals exactly ~24-26 weeks (6 months). Do not let phase durations sum up to 30+ weeks if totalDuration is 6 months!
 
 The JSON schema:
 {
@@ -25,7 +29,7 @@ The JSON schema:
     {
       "id": number,
       "title": "string — phase name",
-      "duration": "string — e.g. '3 weeks'",
+      "duration": "string — e.g. '3 weeks' or '4 weeks'",
       "description": "string — what this phase covers",
       "icon": "string — one relevant emoji",
       "color": "indigo | violet | cyan | emerald | amber | rose",
@@ -61,7 +65,7 @@ Content rules:
 - Make milestones actionable and measurable
 - Projects should be realistic and portfolio-worthy
 
-AGAIN: You MUST include 5 to 7 phases. Output ONLY the JSON object. Start with {
+AGAIN: You MUST include 5 to 7 phases. Phase durations MUST sum up to match totalDuration. Output ONLY the JSON object. Start with {
 `;
 
 export const buildUserPrompt = (topic, userProfile) => `
@@ -79,6 +83,7 @@ Requirements:
 - Include ALL phases from beginner to advanced (5 to 7 phases total)
 - Cover the complete journey from zero to job-ready
 - Tailor each phase to the user's background and time availability
+- Ensure the individual phase durations sum up exactly to the total duration of the roadmap
 
 Output ONLY a valid JSON object. Start with { and end with }. Include ALL 5-7 phases.
 `;

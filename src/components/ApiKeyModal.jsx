@@ -167,17 +167,37 @@ export default function ApiKeyModal({ isOpen, onClose }) {
                 <div className="form-group">
                   <label className="form-label" htmlFor="ollama-url-input">
                     Ollama Endpoint URL
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        className="quick-chip"
+                        style={{ padding: '2px 8px', fontSize: '0.72rem' }}
+                        onClick={() => setLocalOllamaUrl('http://localhost:11434/v1')}
+                      >
+                        💻 Local
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-chip"
+                        style={{ padding: '2px 8px', fontSize: '0.72rem' }}
+                        onClick={() => setLocalOllamaUrl('https://ollama.com/v1')}
+                      >
+                        ☁️ Ollama Cloud
+                      </button>
+                    </div>
                   </label>
                   <input
                     id="ollama-url-input"
                     type="text"
                     className="input-field"
-                    placeholder="http://localhost:11434/v1"
+                    placeholder="https://ollama.com/v1 or http://localhost:11434/v1"
                     value={localOllamaUrl}
                     onChange={e => setLocalOllamaUrl(e.target.value)}
                   />
-                  <p className="form-hint" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Default is <code>http://localhost:11434/v1</code>. Ensure <code>ollama serve</code> is running.
+                  <p className="form-hint" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.4 }}>
+                    ☁️ <strong>Ollama Cloud:</strong> use <code>https://ollama.com/v1</code> & enter your key below.<br />
+                    💻 <strong>Local Ollama:</strong> use <code>http://localhost:11434/v1</code> & run <code>ollama serve</code>.<br />
+                    ⚡ <strong>Zero Setup Free Cloud:</strong> Switch provider tab to <strong>Groq</strong> above to run Llama 3.3 in the cloud instantly for free!
                   </p>
                 </div>
               )}

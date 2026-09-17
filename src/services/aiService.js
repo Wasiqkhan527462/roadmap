@@ -111,13 +111,29 @@ function parseJsonRobust(raw) {
 }
 
 /**
- * Validate that the roadmap has at least 5 phases.
+ * Validate that the roadmap has sufficient phases for the requested level.
  * Throws a sentinel error so the caller can retry.
  */
-function validateRoadmap(roadmap) {
+function validateRoadmap(roadmap, userProfile) {
   const phases = roadmap?.phases;
-  if (!Array.isArray(phases) || phases.length < 5) {
-    console.warn(`[Roadster] Incomplete roadmap: only ${phases?.length ?? 0} phase(s). Retrying…`);
+  if (!Array.isArray(phases) || phases.length === 0) {
+    throw new Error('__incomplete_roadmap__');
+  }
+
+  const levelStr = (userProfile?.targetLevel || '').toLowerCase();
+  let minPhases = 3;
+  if (levelStr.includes('basic') || levelStr.includes('beginner')) {
+    minPhases = 3;
+  } else if (levelStr.includes('intermediate')) {
+    minPhases = 4;
+  } else if (levelStr.includes('advanced')) {
+    minPhases = 5;
+  } else {
+    minPhases = 5;
+  }
+
+  if (phases.length < minPhases) {
+    console.warn(`[Roadster] Incomplete roadmap for target level "${userProfile?.targetLevel}": received ${phases.length} phase(s), expected at least ${minPhases}. Retrying…`);
     throw new Error('__incomplete_roadmap__');
   }
   return roadmap;
@@ -164,7 +180,7 @@ async function callModel(baseURL, headers, model, topic, userProfile) {
   }
 
   const roadmap = parseJsonRobust(content);
-  return validateRoadmap(roadmap);
+  return validateRoadmap(roadmap, userProfile);
 }
 
 

@@ -8,34 +8,47 @@ CRITICAL INSTRUCTION: Your ENTIRE response must be ONE valid JSON object.
 - Do NOT add explanations, preambles, or reasoning outside the JSON.
 - Start your response with { and end with }
 
-MANDATORY REQUIREMENT: You MUST generate a COMPLETE roadmap with EXACTLY 5 to 7 phases.
-- A phase covers 2-5 weeks of learning.
-- ALL phases must be fully written out — do not stop after the first phase.
-- Each phase must include: id, title, duration, description, icon, color, topics (3-6 items), resources (3-5 items), milestone, and project.
-- The phases array MUST contain between 5 and 7 objects. Fewer than 5 is unacceptable.
+STRICT TARGET LEVEL DEFINITION & PHASE SCOPE RULES:
+You MUST strictly match the number of phases and depth of content to the user's requested Target Level:
 
-TARGET LEVEL CUSTOMIZATION:
-- If Target Level is "Basic / Beginner": Focus phases on foundational topics, syntax, basic apps, and core principles.
-- If Target Level is "Intermediate": Focus phases from foundations up to real-world application development and common libraries.
-- If Target Level is "Advanced": Focus phases on deep dive concepts, optimization, architecture, and production practices.
-- If Target Level is "Mastery / Job-Ready Expert": Cover the full A-to-Z spectrum from beginner fundamentals to industry-grade production engineering, testing, security, and portfolio projects.
+1. Target Level = "Basic / Beginner":
+   - Generate EXACTLY 3 to 4 phases total (Total duration ~4-8 weeks).
+   - "difficulty" field MUST be "Beginner".
+   - Cover ONLY environment setup, core syntax, basic UI/concepts, and a simple starter project.
+   - ABSOLUTELY DO NOT include Advanced topics (like ML, AR/VR, native modules, custom bridges), Specialization, or Career/Portfolio prep. Stop once basic proficiency is reached!
+
+2. Target Level = "Intermediate":
+   - Generate EXACTLY 4 to 5 phases total (Total duration ~8-14 weeks).
+   - "difficulty" field MUST be "Intermediate".
+   - Cover foundations, core navigation, state management, APIs, and building complete real-world applications.
+   - ABSOLUTELY DO NOT include hyper-advanced specialization, deep native architecture, or career/portfolio interview prep.
+
+3. Target Level = "Advanced":
+   - Generate EXACTLY 5 to 6 phases total (Total duration ~14-20 weeks).
+   - "difficulty" field MUST be "Advanced".
+   - Cover core concepts up to performance tuning, state architecture, security, native integrations, and production deployment.
+
+4. Target Level = "Mastery / Job-Ready Expert":
+   - Generate EXACTLY 6 to 7 phases total (Total duration ~20-28 weeks).
+   - "difficulty" field MUST be "Mastery".
+   - Full A-to-Z mastery: foundations, core, intermediate, advanced architecture, enterprise projects, specialization, and career/portfolio readiness.
 
 DURATION STRICT CONSISTENCY:
 - The sum of all phase durations MUST match the overall totalDuration!
-- For example, if totalDuration is "6 months" (~24-26 weeks total), distribute those weeks across the 5-7 phases (e.g. 3-4 weeks per phase) so their total sum equals exactly ~24-26 weeks (6 months). Do not let phase durations sum up to 30+ weeks if totalDuration is 6 months!
+- For example, if a Basic roadmap has 3 phases of 2 weeks each, totalDuration MUST be "6 weeks".
 
 The JSON schema:
 {
-  "title": "string — e.g. 'Your Personalized Machine Learning Roadmap'",
-  "summary": "string — 2-3 sentences tailored to the user's background and target level",
-  "totalDuration": "string — e.g. '6 months'",
+  "title": "string — e.g. 'Basic React Native Fundamentals Roadmap'",
+  "summary": "string — 2-3 sentences tailored to the user's background and requested target level",
+  "totalDuration": "string — e.g. '6 weeks'",
   "weeklyHours": number,
   "difficulty": "Beginner | Intermediate | Advanced | Mastery",
   "phases": [
     {
       "id": number,
       "title": "string — phase name",
-      "duration": "string — e.g. '3 weeks' or '4 weeks'",
+      "duration": "string — e.g. '2 weeks' or '3 weeks'",
       "description": "string — what this phase covers",
       "icon": "string — one relevant emoji",
       "color": "indigo | violet | cyan | emerald | amber | rose",
@@ -53,44 +66,38 @@ The JSON schema:
   "nextSteps": "string — what to do after completing the roadmap"
 }
 
-Phase structure rules:
-- Phase 1: Foundations / Setup
-- Phase 2: Core concepts
-- Phase 3: Intermediate skills
-- Phase 4: Advanced techniques
-- Phase 5: Real-world application / projects
-- Phase 6 (optional): Specialization
-- Phase 7 (optional): Career readiness / Portfolio
-
 Content rules:
-- Tailor ALL content to the user's background, career, target level, available time, and learning style
+- Tailor ALL content strictly to the requested Target Level
 - Theory-first learners: conceptual phases early, practical later
 - Practical-first learners: start with hands-on projects immediately
 - Mixed: alternate theory and practice
 - Use real resource names (Coursera, Udemy, official docs, YouTube channels, books)
 - Make milestones actionable and measurable
-- Projects should be realistic and portfolio-worthy
+- Projects should match the user's target level
 
-AGAIN: You MUST include 5 to 7 phases. Phase durations MUST sum up to match totalDuration. Output ONLY the JSON object. Start with {
+AGAIN: Respect the target level strictly! Do NOT include advanced/career phases for Basic or Intermediate roadmaps. Output ONLY the JSON object. Start with {
 `;
 
 export const buildUserPrompt = (topic, userProfile) => `
-Generate a COMPLETE personalized learning roadmap for:
+Generate a personalized learning roadmap for:
 
 Topic: ${topic}
 
 User Profile:
 - Educational Background: ${userProfile.background || 'Not specified'}
 - Current Career/Job: ${userProfile.career || 'Not specified'}
-- Target Mastery / Depth Level: ${userProfile.targetLevel || 'Mastery / Job-Ready Expert'}
+- Target Level: ${userProfile.targetLevel || 'Mastery / Job-Ready Expert'}
 - Weekly Time Available: ${userProfile.timePerWeek || '7'} hours per week
 - Learning Approach Preference: ${userProfile.learningStyle || 'Mixed'}
 
-Requirements:
-- Target Depth: Tailor the depth of the roadmap specifically for the user's desired Target Level (${userProfile.targetLevel || 'Mastery / Job-Ready Expert'}).
-- Include ALL 5 to 7 phases matching this level.
-- Cover the required learning path from current knowledge to the target level.
-- Ensure the individual phase durations sum up exactly to the total duration of the roadmap.
+CRITICAL INSTRUCTIONS FOR TARGET LEVEL:
+The user selected Target Level: "${userProfile.targetLevel || 'Mastery / Job-Ready Expert'}".
 
-Output ONLY a valid JSON object. Start with { and end with }. Include ALL 5-7 phases.
+- If Target Level is "Basic / Beginner": Generate 3 to 4 phases ONLY. Focus strictly on fundamentals and basic apps. DO NOT include advanced/specialization/career phases. Set difficulty to "Beginner".
+- If Target Level is "Intermediate": Generate 4 to 5 phases ONLY. Focus on core apps, state management, and APIs. DO NOT include advanced specialization or career phases. Set difficulty to "Intermediate".
+- If Target Level is "Advanced": Generate 5 to 6 phases. Focus on performance, architecture, and production deployment. Set difficulty to "Advanced".
+- If Target Level is "Mastery / Job-Ready Expert": Generate 6 to 7 phases covering zero-to-hero mastery and career readiness. Set difficulty to "Mastery".
+
+Ensure the individual phase durations sum up exactly to totalDuration.
+Output ONLY a valid JSON object. Start with {.
 `;

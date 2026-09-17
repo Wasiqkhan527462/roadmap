@@ -113,9 +113,24 @@ function parseJsonRobust(raw) {
   throw new Error('__parse_failed__');
 }
 
-/** Make one completion API call and return parsed roadmap JSON */
+/**
+ * Validate that the roadmap has at least 5 phases.
+ * Throws a sentinel error so the caller can retry.
+ */
+function validateRoadmap(roadmap) {
+  const phases = roadmap?.phases;
+  if (!Array.isArray(phases) || phases.length < 5) {
+    console.warn(`[Roadster] Incomplete roadmap: only ${phases?.length ?? 0} phase(s). Retrying…`);
+    throw new Error('__incomplete_roadmap__');
+  }
+  return roadmap;
+}
+
+/** Make one completion API call and return parsed + validated roadmap JSON */
 async function callModel(baseURL, headers, model, topic, userProfile) {
   const useJsonMode = !NO_JSON_FORMAT.some(m => model.includes(m));
+  // Groq supports up to 32k completion tokens; OpenRouter free models are more limited
+  const isGroq = baseURL.includes('groq');
 
   const payload = {
     model,
@@ -124,7 +139,7 @@ async function callModel(baseURL, headers, model, topic, userProfile) {
       { role: 'user',   content: buildUserPrompt(topic, userProfile) },
     ],
     temperature: 0.7,
-    max_tokens: 6000,
+    max_tokens: isGroq ? 16000 : 8000,
     ...(useJsonMode ? { response_format: { type: 'json_object' } } : {}),
   };
 
@@ -143,19 +158,19 @@ async function callModel(baseURL, headers, model, topic, userProfile) {
     '| content length:', content?.length ?? 0,
     '| snippet:', content?.slice(0, 150));
 
-  // Warn on truncation — still try to parse what we have
   if (finishReason === 'length') {
-    console.warn('[Roadster] Response truncated (finish_reason: length)');
+    console.warn('[Roadster] Response truncated (finish_reason: length). Increasing max_tokens may help.');
   }
 
   if (!content) {
-    // Log the full response to help diagnose
     console.error('[Roadster] Empty content. Full response:', JSON.stringify(response.data, null, 2).slice(0, 800));
     throw new Error('__empty_response__');
   }
 
-  return parseJsonRobust(content);
+  const roadmap = parseJsonRobust(content);
+  return validateRoadmap(roadmap);
 }
+
 
 /** Handle standard HTTP API errors */
 function handleApiError(err) {

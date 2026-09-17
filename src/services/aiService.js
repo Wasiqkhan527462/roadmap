@@ -221,6 +221,20 @@ function handleApiError(err) {
  * Test whether a specific model is accessible.
  */
 export async function testModel(provider, apiKey, modelId, customUrl) {
+  if (provider === 'ollama' && (customUrl === 'cloud' || !customUrl || customUrl.includes('ollama.com'))) {
+    try {
+      const cloudHeaders = buildHeaders('groq', '');
+      await axios.post(
+        `${GROQ_BASE_URL}/chat/completions`,
+        { model: GROQ_MODELS[0].id, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 },
+        { headers: cloudHeaders, timeout: 10000 }
+      );
+      return { ok: true, msg: '✓ Connected via Ollama Cloud Free Engine' };
+    } catch {
+      return { ok: false, error: 'Could not connect to Ollama Cloud Engine.' };
+    }
+  }
+
   let baseURL;
   if (provider === 'groq') {
     baseURL = GROQ_BASE_URL;
@@ -250,7 +264,7 @@ export async function testModel(provider, apiKey, modelId, customUrl) {
     if (status === 429) return { ok: false, error: 'Rate limit hit — try again in a moment.' };
     if (isPaidOnly)     return { ok: false, error: 'This model requires a paid account.', paid: true };
 
-    // For Ollama provider: if local/custom URL is not reachable, test Cloud Fallback
+    // For Ollama provider: if local URL is not reachable, test Cloud Fallback
     if (provider === 'ollama') {
       try {
         const cloudHeaders = buildHeaders('groq', '');
@@ -259,9 +273,9 @@ export async function testModel(provider, apiKey, modelId, customUrl) {
           { model: GROQ_MODELS[0].id, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 },
           { headers: cloudHeaders, timeout: 10000 }
         );
-        return { ok: true, msg: '✓ Connected via Free Cloud Ollama Engine (Llama 3.3)' };
+        return { ok: true, msg: '✓ Connected via Ollama Cloud Free Engine' };
       } catch {
-        return { ok: false, error: 'Could not connect to Ollama endpoint or Cloud fallback.' };
+        return { ok: false, error: 'Could not connect to Ollama endpoint.' };
       }
     }
 
@@ -271,6 +285,10 @@ export async function testModel(provider, apiKey, modelId, customUrl) {
 
 /** Validate an API key or provider endpoint */
 export async function validateApiKey(provider, apiKey, customUrl) {
+  if (provider === 'ollama' && (customUrl === 'cloud' || !customUrl || customUrl.includes('ollama.com'))) {
+    return true;
+  }
+
   let baseURL;
   if (provider === 'groq') {
     baseURL = GROQ_BASE_URL;
@@ -287,19 +305,7 @@ export async function validateApiKey(provider, apiKey, customUrl) {
     return true;
   } catch {
     if (provider === 'ollama') {
-      try {
-        const rootUrl = baseURL.replace(/\/v1\/?$/, '');
-        await axios.get(`${rootUrl}/api/tags`, { timeout: 4000 });
-        return true;
-      } catch {
-        // Test Cloud fallback
-        try {
-          await axios.get(`${GROQ_BASE_URL}/models`, { timeout: 5000 });
-          return true;
-        } catch {
-          return false;
-        }
-      }
+      return true; // Always allow saving Ollama Cloud/Local
     }
     return false;
   }
@@ -310,7 +316,7 @@ export async function validateApiKey(provider, apiKey, customUrl) {
  * Auto-retries with a fallback model on empty/parse/timeout failures.
  */
 export async function generateRoadmap(topic, userProfile, settings) {
-  const { provider = 'groq', model } = settings;
+  const { provider = 'groq', model, ollamaUrl } = settings;
   const apiKey = resolveKey(settings);
 
   if (!apiKey && provider !== 'ollama') {
@@ -318,21 +324,31 @@ export async function generateRoadmap(topic, userProfile, settings) {
   }
 
   let baseURL;
-  if (provider === 'groq') {
+  let targetHeaders;
+  let selectedModel = model;
+
+  if (provider === 'ollama' && (ollamaUrl === 'cloud' || !ollamaUrl || ollamaUrl.includes('ollama.com'))) {
     baseURL = GROQ_BASE_URL;
+    targetHeaders = buildHeaders('groq', settings.groqKey || settings.apiKey || '');
+    selectedModel = model === 'llama3.1:8b' ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile';
+  } else if (provider === 'groq') {
+    baseURL = GROQ_BASE_URL;
+    targetHeaders = buildHeaders('groq', apiKey);
+    if (!selectedModel || selectedModel.includes('mistral') || selectedModel.includes('gemma-3')) {
+      selectedModel = GROQ_MODELS[0].id;
+    }
   } else if (provider === 'ollama') {
-    baseURL = (settings.ollamaUrl || OLLAMA_DEFAULT_URL).replace(/\/+$/, '');
+    baseURL = (ollamaUrl || OLLAMA_DEFAULT_URL).replace(/\/+$/, '');
+    targetHeaders = buildHeaders('ollama', apiKey);
   } else {
     baseURL = OPENROUTER_BASE_URL;
-  }
-
-  let selectedModel = model;
-  if (!selectedModel || selectedModel.includes('mistral') || selectedModel.includes('gemma-3')) {
-    selectedModel = provider === 'groq' ? GROQ_MODELS[0].id : provider === 'ollama' ? OLLAMA_MODELS[0].id : OPENROUTER_MODELS[0].id;
+    targetHeaders = buildHeaders('openrouter', apiKey);
+    if (!selectedModel || selectedModel.includes('mistral') || selectedModel.includes('gemma-3')) {
+      selectedModel = OPENROUTER_MODELS[0].id;
+    }
   }
 
   const fallbackModel = provider === 'groq' ? GROQ_FALLBACK : provider === 'ollama' ? OLLAMA_FALLBACK : OR_FALLBACK;
-  const headers       = buildHeaders(provider, apiKey);
 
   const isTimeoutErr = (err) => err.code === 'ECONNABORTED' || err.message?.includes('timeout');
   const isRetryable = (err) =>

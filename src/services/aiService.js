@@ -3,6 +3,7 @@ import { buildSystemPrompt, buildUserPrompt } from './systemPrompt';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
+const OLLAMA_DEFAULT_URL = 'http://localhost:11434/v1';
 
 // Default model options per provider — free-tier
 export const OPENROUTER_MODELS = [
@@ -18,6 +19,14 @@ export const GROQ_MODELS = [
   { id: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B (Free)',            free: true },
 ];
 
+export const OLLAMA_MODELS = [
+  { id: 'llama3.2',    label: 'Llama 3.2 (3B - Fast & Free)', free: true },
+  { id: 'llama3.1:8b', label: 'Llama 3.1 (8B - Balanced)',    free: true },
+  { id: 'qwen2.5',     label: 'Qwen 2.5 (Free)',               free: true },
+  { id: 'gemma2',      label: 'Gemma 2 (Free)',                free: true },
+  { id: 'mistral',     label: 'Mistral (Free)',                free: true },
+];
+
 // Models that must NOT use response_format: json_object
 const NO_JSON_FORMAT = [
   'openrouter/auto',
@@ -29,13 +38,17 @@ const NO_JSON_FORMAT = [
 const OR_FALLBACK = 'openrouter/auto';
 // Groq fallback
 const GROQ_FALLBACK = 'llama-3.1-8b-instant';
+// Ollama fallback
+const OLLAMA_FALLBACK = 'llama3.2';
 
 /** Build request headers */
 function buildHeaders(provider, apiKey) {
   const headers = {
-    'Authorization': `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
   };
+  if (apiKey && apiKey.trim()) {
+    headers['Authorization'] = `Bearer ${apiKey.trim()}`;
+  }
   if (provider === 'openrouter') {
     headers['HTTP-Referer'] = window.location.origin;
     headers['X-Title'] = 'Roadster — AI Learning Roadmap';
@@ -45,9 +58,9 @@ function buildHeaders(provider, apiKey) {
 
 /** Resolve the correct key from settings */
 function resolveKey(settings) {
-  return settings.provider === 'groq'
-    ? (settings.groqKey || settings.apiKey)
-    : (settings.openrouterKey || settings.apiKey);
+  if (settings.provider === 'groq') return settings.groqKey || settings.apiKey || '';
+  if (settings.provider === 'ollama') return settings.ollamaKey || settings.apiKey || 'ollama';
+  return settings.openrouterKey || settings.apiKey || '';
 }
 
 /**
@@ -62,7 +75,6 @@ function extractContent(choice) {
   if (msg.content && msg.content.trim()) return msg.content.trim();
 
   // DeepSeek R1 returns reasoning in reasoning_content, answer in content
-  // Sometimes content is empty and the answer is in reasoning_content
   if (msg.reasoning_content && msg.reasoning_content.trim()) {
     return msg.reasoning_content.trim();
   }
@@ -190,7 +202,11 @@ function handleApiError(err) {
   const apiMsg = err.response?.data?.error?.message || '';
 
   if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-    throw new Error('Request timed out. The AI provider is experiencing high traffic. Please try again or switch to Llama 3.1 8B Instant in Settings.');
+    throw new Error('Request timed out. The AI provider is experiencing high traffic. Please try again or switch model in Settings.');
+  }
+
+  if (err.code === 'ECONNREFUSED' || err.message?.includes('Network Error')) {
+    throw new Error('Could not connect to Ollama. Ensure Ollama server is running (e.g. `ollama serve`).');
   }
 
   if (status === 401) throw new Error('Invalid API key. Please check your credentials in Settings.');
@@ -202,17 +218,25 @@ function handleApiError(err) {
 }
 
 /**
- * Test whether a specific model is accessible with the given API key.
+ * Test whether a specific model is accessible.
  */
-export async function testModel(provider, apiKey, modelId) {
-  const baseURL = provider === 'groq' ? GROQ_BASE_URL : OPENROUTER_BASE_URL;
+export async function testModel(provider, apiKey, modelId, customUrl) {
+  let baseURL;
+  if (provider === 'groq') {
+    baseURL = GROQ_BASE_URL;
+  } else if (provider === 'ollama') {
+    baseURL = (customUrl || OLLAMA_DEFAULT_URL).replace(/\/+$/, '');
+  } else {
+    baseURL = OPENROUTER_BASE_URL;
+  }
+
   const headers = buildHeaders(provider, apiKey);
 
   try {
     await axios.post(
       `${baseURL}/chat/completions`,
       { model: modelId, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 },
-      { headers, timeout: 12000 }
+      { headers, timeout: 15000 }
     );
     return { ok: true };
   } catch (err) {
@@ -225,7 +249,40 @@ export async function testModel(provider, apiKey, modelId) {
     if (status === 401) return { ok: false, error: 'Invalid API key.' };
     if (status === 429) return { ok: false, error: 'Rate limit hit — try again in a moment.' };
     if (isPaidOnly)     return { ok: false, error: 'This model requires a paid account.', paid: true };
+    if (provider === 'ollama' && (err.code === 'ECONNREFUSED' || msg.includes('Network Error'))) {
+      return { ok: false, error: 'Could not connect to Ollama endpoint. Ensure Ollama is running (`ollama serve`).' };
+    }
     return { ok: false, error: msg || 'Model is unavailable.' };
+  }
+}
+
+/** Validate an API key or provider endpoint */
+export async function validateApiKey(provider, apiKey, customUrl) {
+  let baseURL;
+  if (provider === 'groq') {
+    baseURL = GROQ_BASE_URL;
+  } else if (provider === 'ollama') {
+    baseURL = (customUrl || OLLAMA_DEFAULT_URL).replace(/\/+$/, '');
+  } else {
+    baseURL = OPENROUTER_BASE_URL;
+  }
+
+  const headers = buildHeaders(provider, apiKey);
+
+  try {
+    await axios.get(`${baseURL}/models`, { headers, timeout: 8000 });
+    return true;
+  } catch {
+    if (provider === 'ollama') {
+      try {
+        const rootUrl = baseURL.replace(/\/v1\/?$/, '');
+        await axios.get(`${rootUrl}/api/tags`, { timeout: 5000 });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return false;
   }
 }
 
@@ -237,17 +294,25 @@ export async function generateRoadmap(topic, userProfile, settings) {
   const { provider = 'groq', model } = settings;
   const apiKey = resolveKey(settings);
 
-  if (!apiKey) throw new Error('API key is required. Click "Add API Key" to configure.');
-
-  const baseURL = provider === 'groq' ? GROQ_BASE_URL : OPENROUTER_BASE_URL;
-  let selectedModel = model || (provider === 'groq' ? GROQ_MODELS[0].id : OPENROUTER_MODELS[0].id);
-
-  // Auto-migrate legacy or deprecated models
-  if (selectedModel.includes('mistral') || selectedModel.includes('gemma-3')) {
-    selectedModel = provider === 'groq' ? GROQ_MODELS[0].id : OPENROUTER_MODELS[0].id;
+  if (!apiKey && provider !== 'ollama') {
+    throw new Error('API key is required. Click "Add API Key" to configure.');
   }
 
-  const fallbackModel = provider === 'groq' ? GROQ_FALLBACK : OR_FALLBACK;
+  let baseURL;
+  if (provider === 'groq') {
+    baseURL = GROQ_BASE_URL;
+  } else if (provider === 'ollama') {
+    baseURL = (settings.ollamaUrl || OLLAMA_DEFAULT_URL).replace(/\/+$/, '');
+  } else {
+    baseURL = OPENROUTER_BASE_URL;
+  }
+
+  let selectedModel = model;
+  if (!selectedModel || selectedModel.includes('mistral') || selectedModel.includes('gemma-3')) {
+    selectedModel = provider === 'groq' ? GROQ_MODELS[0].id : provider === 'ollama' ? OLLAMA_MODELS[0].id : OPENROUTER_MODELS[0].id;
+  }
+
+  const fallbackModel = provider === 'groq' ? GROQ_FALLBACK : provider === 'ollama' ? OLLAMA_FALLBACK : OR_FALLBACK;
   const headers       = buildHeaders(provider, apiKey);
 
   const isTimeoutErr = (err) => err.code === 'ECONNABORTED' || err.message?.includes('timeout');
@@ -281,18 +346,5 @@ export async function generateRoadmap(topic, userProfile, settings) {
     }
 
     handleApiError(primaryErr);
-  }
-}
-
-/** Validate an API key */
-export async function validateApiKey(provider, apiKey) {
-  const baseURL = provider === 'groq' ? GROQ_BASE_URL : OPENROUTER_BASE_URL;
-  const headers = { 'Authorization': `Bearer ${apiKey}` };
-  if (provider === 'openrouter') headers['HTTP-Referer'] = window.location.origin;
-  try {
-    await axios.get(`${baseURL}/models`, { headers, timeout: 8000 });
-    return true;
-  } catch {
-    return false;
   }
 }

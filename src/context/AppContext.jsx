@@ -23,11 +23,13 @@ export function AppProvider({ children }) {
     apiKey: import.meta.env.VITE_GROQ_API_KEY || '',
     openrouterKey: import.meta.env.VITE_OPENROUTER_API_KEY || '',
     groqKey: import.meta.env.VITE_GROQ_API_KEY || '',
+    ollamaKey: '',
+    ollamaUrl: 'http://localhost:11434/v1',
     model: 'llama-3.3-70b-versatile',
   };
 
   // Bump this version whenever models or defaults change to clear stale caches
-  const SETTINGS_VERSION = 7;
+  const SETTINGS_VERSION = 8;
 
   // Settings stored in localStorage
   const [settings, setSettings] = useState(() => {

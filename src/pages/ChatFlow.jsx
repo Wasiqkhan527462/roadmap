@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { generateRoadmap } from '../services/aiService';
 import ApiKeyModal from '../components/ApiKeyModal';
+import WritingAnimation from '../components/WritingAnimation';
 import './ChatFlow.css';
 
 const QUESTIONS = [
@@ -175,19 +176,32 @@ export default function ChatFlow() {
       <div className="chat-page loading-page">
         <motion.div
           className="loading-container"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <div className="loading-orb">
-            <div className="orb-inner" />
-            <div className="orb-ring" />
-            <div className="orb-ring ring-2" />
-          </div>
+          {/* Cartoon writing animation */}
+          <WritingAnimation />
+
           <h2 className="loading-title gradient-text">Crafting Your Roadmap</h2>
-          <p className="loading-subtitle">{loadingMsg}</p>
-          <div className="loading-dots">
-            <span /><span /><span />
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={loadingMsg}
+              className="loading-subtitle"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.35 }}
+            >
+              {loadingMsg}
+            </motion.p>
+          </AnimatePresence>
+
+          {/* Animated progress bar */}
+          <div className="loading-progress-track">
+            <div className="loading-progress-fill" />
           </div>
+
           {error && (
             <div className="error-box">
               <span>⚠️</span> {error}

@@ -1,0 +1,398 @@
+/* ============================================================
+   WRITER SCENE — Cartoon character writing notes animation
+   ============================================================ */
+
+.writer-scene {
+  position: relative;
+  width: 320px;
+  height: 280px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+/* ── SPARKLES ─────────────────────────────────────────── */
+.sparkle {
+  position: absolute;
+  font-size: 1rem;
+  color: var(--accent-indigo);
+  animation: sparkle-float 3s ease-in-out infinite;
+  opacity: 0;
+  pointer-events: none;
+}
+.s1 { top: 20px; left: 30px;  animation-delay: 0s;    font-size: 0.8rem; color: #818cf8; }
+.s2 { top: 10px; right: 40px; animation-delay: 0.8s;  font-size: 1.2rem; color: #a78bfa; }
+.s3 { top: 50px; left: 70px;  animation-delay: 1.6s;  font-size: 0.7rem; color: #6366f1; }
+.s4 { top: 35px; right: 80px; animation-delay: 2.2s;  font-size: 0.9rem; color: #c4b5fd; }
+
+@keyframes sparkle-float {
+  0%   { opacity: 0; transform: translateY(0) scale(0.5) rotate(0deg); }
+  40%  { opacity: 1; transform: translateY(-20px) scale(1) rotate(20deg); }
+  100% { opacity: 0; transform: translateY(-40px) scale(0.3) rotate(40deg); }
+}
+
+/* ── DESK ─────────────────────────────────────────────── */
+.desk {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  height: 18px;
+  background: linear-gradient(180deg, #4c3a2a 0%, #2e221a 100%);
+  border-radius: 4px 4px 2px 2px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+}
+
+/* ── NOTEPAD ──────────────────────────────────────────── */
+.notepad {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 130px;
+  background: #f8f5f0;
+  border-radius: 3px 8px 8px 3px;
+  box-shadow: 2px 2px 12px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.notepad-rings {
+  position: absolute;
+  top: 0;
+  left: -8px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 14px 0;
+}
+
+.ring {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 3px solid #94a3b8;
+  background: transparent;
+}
+
+/* Note lines that appear one by one */
+.notepad-lines {
+  position: absolute;
+  top: 16px;
+  left: 14px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.note-line {
+  height: 2px;
+  border-radius: 1px;
+  background: #94a3b8;
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+.l1 { animation: draw-line 0.4s ease forwards 0.3s;  width: 80%; }
+.l2 { animation: draw-line 0.4s ease forwards 0.9s;  width: 65%; }
+.l3 { animation: draw-line 0.4s ease forwards 1.5s;  width: 75%; }
+.l4 { animation: draw-line 0.4s ease forwards 2.1s;  width: 50%; }
+.l5 { animation: draw-line 0.4s ease forwards 2.7s;  width: 70%; }
+
+/* Loop: reset and redraw every ~4s */
+.note-line {
+  animation-iteration-count: infinite;
+  animation-duration: 4s;
+}
+.l1 { animation: draw-line-loop 4s ease infinite 0s; }
+.l2 { animation: draw-line-loop 4s ease infinite 0.6s; }
+.l3 { animation: draw-line-loop 4s ease infinite 1.2s; }
+.l4 { animation: draw-line-loop 4s ease infinite 1.8s; }
+.l5 { animation: draw-line-loop 4s ease infinite 2.4s; }
+
+@keyframes draw-line-loop {
+  0%    { transform: scaleX(0); opacity: 0; }
+  8%    { transform: scaleX(0); opacity: 1; }
+  18%   { transform: scaleX(1); }
+  75%   { transform: scaleX(1); opacity: 1; }
+  90%   { transform: scaleX(0); opacity: 0; }
+  100%  { transform: scaleX(0); opacity: 0; }
+}
+
+/* ── PENCIL ───────────────────────────────────────────── */
+.pencil-wrap {
+  position: absolute;
+  bottom: 8px;
+  right: -12px;
+  animation: pencil-write 0.5s ease-in-out infinite alternate;
+}
+
+.pencil {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: rotate(-35deg);
+  transform-origin: bottom center;
+}
+
+.pencil-tip {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 10px solid #f59e0b;
+}
+
+.pencil-body {
+  width: 10px;
+  height: 52px;
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+  border-radius: 1px;
+}
+
+.pencil-eraser {
+  width: 10px;
+  height: 10px;
+  background: #fca5a5;
+  border-radius: 1px 1px 0 0;
+}
+
+@keyframes pencil-write {
+  0%   { transform: translate(0px, 0px) rotate(0deg); }
+  25%  { transform: translate(4px, -2px) rotate(3deg); }
+  50%  { transform: translate(8px, 0px) rotate(0deg); }
+  75%  { transform: translate(12px, -2px) rotate(-2deg); }
+  100% { transform: translate(16px, 0px) rotate(1deg); }
+}
+
+/* ── COFFEE CUP ───────────────────────────────────────── */
+.coffee-cup {
+  position: absolute;
+  bottom: 18px;
+  right: 20px;
+}
+
+.cup-body {
+  width: 28px;
+  height: 30px;
+  background: linear-gradient(160deg, #7c3aed 0%, #4f46e5 100%);
+  border-radius: 2px 2px 6px 6px;
+  position: relative;
+}
+
+.cup-handle {
+  position: absolute;
+  right: -10px;
+  top: 5px;
+  width: 12px;
+  height: 16px;
+  border: 3px solid #4f46e5;
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+}
+
+.steam {
+  position: absolute;
+  bottom: 30px;
+  width: 3px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.3);
+  animation: steam-rise 1.5s ease-in-out infinite;
+  opacity: 0;
+}
+.st1 { left: 4px;  height: 10px; animation-delay: 0s; }
+.st2 { left: 11px; height: 14px; animation-delay: 0.4s; }
+.st3 { left: 18px; height: 8px;  animation-delay: 0.8s; }
+
+@keyframes steam-rise {
+  0%   { opacity: 0; transform: translateY(0) scaleX(1); }
+  50%  { opacity: 0.7; transform: translateY(-12px) scaleX(1.4); }
+  100% { opacity: 0; transform: translateY(-22px) scaleX(0.8); }
+}
+
+/* ── CHARACTER ────────────────────────────────────────── */
+.character {
+  position: absolute;
+  bottom: 16px;
+  left: 20px;
+  animation: char-bob 2s ease-in-out infinite;
+}
+
+@keyframes char-bob {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+
+/* Head */
+.char-head {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  background: #fde68a;
+  border-radius: 50%;
+  margin: 0 auto 0;
+  border: 3px solid #f59e0b;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.char-hair {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 24px;
+  background: #1e1b4b;
+  border-radius: 20px 20px 0 0;
+}
+
+.char-face { position: relative; top: 16px; }
+
+.char-eye {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  border: 1px solid #334155;
+  top: 0;
+  animation: blink 3.5s ease-in-out infinite;
+}
+.left-eye  { left: 8px; }
+.right-eye { right: 8px; }
+
+.pupil {
+  width: 5px;
+  height: 5px;
+  background: #1e1b4b;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes blink {
+  0%, 94%, 100% { transform: scaleY(1); }
+  96%           { transform: scaleY(0.1); }
+}
+
+.char-mouth {
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 9px;
+  border-bottom: 3px solid #b45309;
+  border-radius: 0 0 12px 12px;
+}
+
+/* Body */
+.char-body {
+  width: 54px;
+  height: 48px;
+  background: linear-gradient(160deg, #6366f1 0%, #4f46e5 100%);
+  border-radius: 10px 10px 4px 4px;
+  margin: 0 auto;
+  position: relative;
+  box-shadow: 0 4px 14px rgba(79,70,229,0.4);
+}
+
+/* Arms */
+.char-arm {
+  position: absolute;
+  width: 14px;
+  height: 38px;
+  background: #fde68a;
+  border-radius: 8px;
+  top: 4px;
+  border: 2px solid #f59e0b;
+}
+
+.left-arm {
+  left: -12px;
+  transform-origin: top center;
+  animation: arm-write 0.5s ease-in-out infinite alternate;
+}
+
+.right-arm {
+  right: -12px;
+  transform-origin: top center;
+  animation: arm-hold 2s ease-in-out infinite;
+}
+
+@keyframes arm-write {
+  0%   { transform: rotate(-25deg) translateX(2px); }
+  100% { transform: rotate(-10deg) translateX(6px); }
+}
+
+@keyframes arm-hold {
+  0%, 100% { transform: rotate(25deg); }
+  50%       { transform: rotate(20deg); }
+}
+
+.char-hand {
+  width: 12px;
+  height: 12px;
+  background: #fde68a;
+  border-radius: 50%;
+  position: absolute;
+  bottom: -4px;
+  left: -1px;
+  border: 2px solid #f59e0b;
+}
+
+/* ── THOUGHT BUBBLES ──────────────────────────────────── */
+.thought-bubble {
+  position: absolute;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  backdrop-filter: blur(6px);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  opacity: 0;
+  animation: bubble-pop 6s ease-in-out infinite;
+}
+
+.thought-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 16px;
+  width: 8px;
+  height: 8px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 50%;
+}
+.thought-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -16px;
+  left: 20px;
+  width: 5px;
+  height: 5px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 50%;
+}
+
+.tb1 { top: 20px; left: 140px; animation-delay: 0s; }
+.tb2 { top: 20px; left: 140px; animation-delay: 2s; }
+.tb3 { top: 20px; left: 140px; animation-delay: 4s; }
+
+@keyframes bubble-pop {
+  0%    { opacity: 0; transform: translateY(8px) scale(0.85); }
+  10%   { opacity: 1; transform: translateY(0) scale(1); }
+  28%   { opacity: 1; transform: translateY(-4px) scale(1); }
+  40%   { opacity: 0; transform: translateY(-10px) scale(0.9); }
+  100%  { opacity: 0; }
+}

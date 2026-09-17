@@ -73,7 +73,11 @@ export default function LandingPage() {
       <nav className="landing-nav">
         <div className="container nav-inner">
           <div className="nav-logo">
-            <span className="logo-icon">🗺️</span>
+            <img
+              src="/roadster-logo.png"
+              alt="Roadster"
+              className="logo-img"
+            />
             <span className="logo-text gradient-text">Roadster</span>
           </div>
           <button

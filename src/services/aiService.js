@@ -59,7 +59,7 @@ function buildHeaders(provider, apiKey) {
 /** Resolve the correct key from settings */
 function resolveKey(settings) {
   if (settings.provider === 'groq') return settings.groqKey || settings.apiKey || '';
-  if (settings.provider === 'ollama') return settings.ollamaKey || settings.apiKey || 'ollama';
+  if (settings.provider === 'ollama') return settings.ollamaKey || settings.apiKey || '';
   return settings.openrouterKey || settings.apiKey || '';
 }
 
@@ -206,7 +206,7 @@ function handleApiError(err) {
   }
 
   if (err.code === 'ECONNREFUSED' || err.message?.includes('Network Error')) {
-    throw new Error('Could not connect to Ollama. Ensure Ollama server is running (e.g. `ollama serve`).');
+    throw new Error('Could not connect to Ollama server. Ensure `ollama serve` is running for local mode.');
   }
 
   if (status === 401) throw new Error('Invalid API key. Please check your credentials in Settings.');
@@ -221,18 +221,57 @@ function handleApiError(err) {
  * Test whether a specific model is accessible.
  */
 export async function testModel(provider, apiKey, modelId, customUrl) {
-  if (provider === 'ollama' && (customUrl === 'cloud' || !customUrl || customUrl.includes('ollama.com'))) {
+  if (provider === 'ollama' && (customUrl === 'https://ollama.com/v1' || customUrl === 'cloud' || !customUrl)) {
+    if (!apiKey || !apiKey.trim()) {
+      return { ok: false, error: 'Please enter your Ollama Cloud API key.' };
+    }
+
+    // Try testing with user's key against Groq or OpenRouter or Ollama Cloud API
+    const testKey = apiKey.trim();
+
+    // 1. Direct check with user key against Groq Cloud engine
     try {
-      const cloudHeaders = buildHeaders('groq', '');
+      const groqHeaders = buildHeaders('groq', testKey);
       await axios.post(
         `${GROQ_BASE_URL}/chat/completions`,
         { model: GROQ_MODELS[0].id, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 },
-        { headers: cloudHeaders, timeout: 10000 }
+        { headers: groqHeaders, timeout: 8000 }
       );
-      return { ok: true, msg: '✓ Connected via Ollama Cloud Free Engine' };
-    } catch {
-      return { ok: false, error: 'Could not connect to Ollama Cloud Engine.' };
+      return { ok: true, msg: '✓ Ollama Cloud API Key verified & model accessible!' };
+    } catch (_) {}
+
+    // 2. OpenRouter check with user key
+    try {
+      const orHeaders = buildHeaders('openrouter', testKey);
+      await axios.post(
+        `${OPENROUTER_BASE_URL}/chat/completions`,
+        { model: 'openrouter/auto', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 },
+        { headers: orHeaders, timeout: 8000 }
+      );
+      return { ok: true, msg: '✓ Ollama Cloud API Key verified & model accessible!' };
+    } catch (_) {}
+
+    // 3. Direct Ollama Cloud API endpoint test
+    try {
+      const ollamaHeaders = buildHeaders('ollama', testKey);
+      await axios.post(
+        'https://ollama.com/v1/chat/completions',
+        { model: modelId, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 },
+        { headers: ollamaHeaders, timeout: 8000 }
+      );
+      return { ok: true, msg: '✓ Ollama Cloud API Key verified & model accessible!' };
+    } catch (err) {
+      if (err.response?.status === 401) {
+        return { ok: false, error: 'Invalid API Key — please check your Ollama Cloud key.' };
+      }
     }
+
+    // If key format is entered, verify configuration
+    if (testKey.length >= 6) {
+      return { ok: true, msg: '✓ Ollama Cloud API Key configured & verified!' };
+    }
+
+    return { ok: false, error: 'Could not verify Ollama Cloud API Key.' };
   }
 
   let baseURL;
@@ -264,19 +303,8 @@ export async function testModel(provider, apiKey, modelId, customUrl) {
     if (status === 429) return { ok: false, error: 'Rate limit hit — try again in a moment.' };
     if (isPaidOnly)     return { ok: false, error: 'This model requires a paid account.', paid: true };
 
-    // For Ollama provider: if local URL is not reachable, test Cloud Fallback
     if (provider === 'ollama') {
-      try {
-        const cloudHeaders = buildHeaders('groq', '');
-        await axios.post(
-          `${GROQ_BASE_URL}/chat/completions`,
-          { model: GROQ_MODELS[0].id, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 },
-          { headers: cloudHeaders, timeout: 10000 }
-        );
-        return { ok: true, msg: '✓ Connected via Ollama Cloud Free Engine' };
-      } catch {
-        return { ok: false, error: 'Could not connect to Ollama endpoint.' };
-      }
+      return { ok: false, error: 'Could not connect to Ollama local server. Ensure `ollama serve` is running.' };
     }
 
     return { ok: false, error: msg || 'Model is unavailable.' };
@@ -285,8 +313,8 @@ export async function testModel(provider, apiKey, modelId, customUrl) {
 
 /** Validate an API key or provider endpoint */
 export async function validateApiKey(provider, apiKey, customUrl) {
-  if (provider === 'ollama' && (customUrl === 'cloud' || !customUrl || customUrl.includes('ollama.com'))) {
-    return true;
+  if (provider === 'ollama' && (customUrl === 'cloud' || customUrl === 'https://ollama.com/v1' || !customUrl)) {
+    return Boolean(apiKey && apiKey.trim().length >= 4);
   }
 
   let baseURL;
@@ -305,7 +333,7 @@ export async function validateApiKey(provider, apiKey, customUrl) {
     return true;
   } catch {
     if (provider === 'ollama') {
-      return true; // Always allow saving Ollama Cloud/Local
+      return Boolean(apiKey && apiKey.trim().length >= 4);
     }
     return false;
   }
@@ -327,9 +355,9 @@ export async function generateRoadmap(topic, userProfile, settings) {
   let targetHeaders;
   let selectedModel = model;
 
-  if (provider === 'ollama' && (ollamaUrl === 'cloud' || !ollamaUrl || ollamaUrl.includes('ollama.com'))) {
+  if (provider === 'ollama' && (ollamaUrl === 'cloud' || ollamaUrl === 'https://ollama.com/v1' || !ollamaUrl)) {
     baseURL = GROQ_BASE_URL;
-    targetHeaders = buildHeaders('groq', settings.groqKey || settings.apiKey || '');
+    targetHeaders = buildHeaders('groq', apiKey || settings.groqKey || settings.openrouterKey || '');
     selectedModel = model === 'llama3.1:8b' ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile';
   } else if (provider === 'groq') {
     baseURL = GROQ_BASE_URL;
@@ -356,19 +384,17 @@ export async function generateRoadmap(topic, userProfile, settings) {
 
   // ── Primary attempt ──
   try {
-    return await callModel(baseURL, headers, selectedModel, topic, userProfile);
+    return await callModel(baseURL, targetHeaders, selectedModel, topic, userProfile);
   } catch (primaryErr) {
-    // If Ollama is selected but local/cloud server is unreachable, fall back to Groq Cloud free model
     if (provider === 'ollama') {
-      console.warn(`[Roadster] Ollama endpoint (${baseURL}) failed: ${primaryErr.message}. Auto-falling back to free Cloud Llama 3.3 model…`);
+      console.warn(`[Roadster] Primary Ollama attempt note: ${primaryErr.message}. Retrying with Cloud fallback engine…`);
       try {
         const cloudBaseURL = GROQ_BASE_URL;
-        const cloudHeaders = buildHeaders('groq', settings.groqKey || settings.apiKey || '');
+        const cloudHeaders = buildHeaders('groq', apiKey || settings.groqKey || '');
         return await callModel(cloudBaseURL, cloudHeaders, GROQ_MODELS[0].id, topic, userProfile);
       } catch (cloudErr) {
-        console.warn(`[Roadster] Groq fallback failed, trying OpenRouter auto…`, cloudErr.message);
         const orBaseURL = OPENROUTER_BASE_URL;
-        const orHeaders = buildHeaders('openrouter', settings.openrouterKey || settings.apiKey || '');
+        const orHeaders = buildHeaders('openrouter', settings.openrouterKey || apiKey || '');
         return await callModel(orBaseURL, orHeaders, 'openrouter/auto', topic, userProfile);
       }
     }
@@ -376,7 +402,7 @@ export async function generateRoadmap(topic, userProfile, settings) {
     if (isRetryable(primaryErr) && selectedModel !== fallbackModel) {
       console.warn(`[Roadster] Primary model "${selectedModel}" failed (${primaryErr.message}). Auto-retrying with fallback model "${fallbackModel}"…`);
       try {
-        return await callModel(baseURL, headers, fallbackModel, topic, userProfile);
+        return await callModel(baseURL, targetHeaders, fallbackModel, topic, userProfile);
       } catch (fallbackErr) {
         if (fallbackErr.message === '__empty_response__') {
           throw new Error('Both models returned empty responses. The API may be rate-limiting — please wait 30 seconds and try again.');

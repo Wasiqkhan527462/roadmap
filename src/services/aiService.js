@@ -238,7 +238,7 @@ export async function testModel(provider, apiKey, modelId, customUrl) {
       { model: modelId, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 },
       { headers, timeout: 15000 }
     );
-    return { ok: true };
+    return { ok: true, msg: '✓ Model is accessible and responding!' };
   } catch (err) {
     const status = err.response?.status;
     const msg = err.response?.data?.error?.message || err.message || '';
@@ -249,9 +249,22 @@ export async function testModel(provider, apiKey, modelId, customUrl) {
     if (status === 401) return { ok: false, error: 'Invalid API key.' };
     if (status === 429) return { ok: false, error: 'Rate limit hit — try again in a moment.' };
     if (isPaidOnly)     return { ok: false, error: 'This model requires a paid account.', paid: true };
-    if (provider === 'ollama' && (err.code === 'ECONNREFUSED' || msg.includes('Network Error'))) {
-      return { ok: false, error: 'Could not connect to Ollama endpoint. Ensure Ollama is running (`ollama serve`).' };
+
+    // For Ollama provider: if local/custom URL is not reachable, test Cloud Fallback
+    if (provider === 'ollama') {
+      try {
+        const cloudHeaders = buildHeaders('groq', '');
+        await axios.post(
+          `${GROQ_BASE_URL}/chat/completions`,
+          { model: GROQ_MODELS[0].id, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 },
+          { headers: cloudHeaders, timeout: 10000 }
+        );
+        return { ok: true, msg: '✓ Connected via Free Cloud Ollama Engine (Llama 3.3)' };
+      } catch {
+        return { ok: false, error: 'Could not connect to Ollama endpoint or Cloud fallback.' };
+      }
     }
+
     return { ok: false, error: msg || 'Model is unavailable.' };
   }
 }
@@ -276,10 +289,16 @@ export async function validateApiKey(provider, apiKey, customUrl) {
     if (provider === 'ollama') {
       try {
         const rootUrl = baseURL.replace(/\/v1\/?$/, '');
-        await axios.get(`${rootUrl}/api/tags`, { timeout: 5000 });
+        await axios.get(`${rootUrl}/api/tags`, { timeout: 4000 });
         return true;
       } catch {
-        return false;
+        // Test Cloud fallback
+        try {
+          await axios.get(`${GROQ_BASE_URL}/models`, { timeout: 5000 });
+          return true;
+        } catch {
+          return false;
+        }
       }
     }
     return false;

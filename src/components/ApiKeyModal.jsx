@@ -72,7 +72,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
     setModelTest({ status: 'testing', msg: 'Testing model access…' });
     const result = await testModel(localProvider, localKey.trim(), localModel, localOllamaUrl.trim());
     if (result.ok) {
-      setModelTest({ status: 'ok', msg: '✓ Model is accessible and responding!' });
+      setModelTest({ status: 'ok', msg: result.msg || '✓ Model is accessible and responding!' });
     } else if (result.paid) {
       setModelTest({ status: 'paid', msg: `💳 Paid model: ${result.error}` });
     } else {

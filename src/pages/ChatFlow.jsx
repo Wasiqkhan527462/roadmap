@@ -38,8 +38,42 @@ const QUESTIONS = [
     ],
   },
   {
-    id: 'timePerWeek',
+    id: 'targetLevel',
     step: 3,
+    icon: '🎯',
+    title: 'What is your target level for this roadmap?',
+    subtitle: 'Select how deep you want your learning path to go.',
+    type: 'level-select',
+    levelOptions: [
+      {
+        value: 'Basic / Beginner',
+        icon: '🌱',
+        title: 'Basic / Beginner',
+        desc: 'Master fundamentals, essential concepts, syntax, and simple usage',
+      },
+      {
+        value: 'Intermediate',
+        icon: '🚀',
+        title: 'Intermediate',
+        desc: 'Build real-world apps, state management, and popular ecosystem tools',
+      },
+      {
+        value: 'Advanced',
+        icon: '⚡',
+        title: 'Advanced',
+        desc: 'Performance tuning, complex design patterns, testing, & architecture',
+      },
+      {
+        value: 'Mastery / Job-Ready Expert',
+        icon: '🏆',
+        title: 'Mastery / Job-Ready Expert',
+        desc: 'End-to-end expertise, security, CI/CD, production projects, & job readiness',
+      },
+    ],
+  },
+  {
+    id: 'timePerWeek',
+    step: 4,
     icon: '⏱️',
     title: 'How much time can you dedicate weekly?',
     subtitle: 'This helps us estimate your roadmap duration and phase lengths.',
@@ -54,7 +88,7 @@ const QUESTIONS = [
   },
   {
     id: 'learningStyle',
-    step: 4,
+    step: 5,
     icon: '🧠',
     title: `What's your preferred learning approach?`,
     subtitle: `We'll structure your roadmap phases to match how you learn best.`,
@@ -92,7 +126,13 @@ const slideVariants = {
 export default function ChatFlow() {
   const { topic, setView, setRoadmap, setIsGenerating, userProfile, setUserProfile, settings } = useApp();
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState({ background: '', career: '', timePerWeek: '', learningStyle: '' });
+  const [answers, setAnswers] = useState({
+    background: '',
+    career: '',
+    targetLevel: 'Mastery / Job-Ready Expert',
+    timePerWeek: '',
+    learningStyle: '',
+  });
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('');
@@ -288,7 +328,7 @@ export default function ChatFlow() {
                   <span className="badge badge-violet">Question {q.step} of {QUESTIONS.length}</span>
                 </div>
 
-                <h2 className="question-title">{q.title}</h2>
+                <h2 className="question-title">{q.title.includes('${topic}') ? q.title.replace('${topic}', topic) : q.title}</h2>
                 <p className="question-subtitle">{q.subtitle}</p>
 
                 {/* TEXTAREA type */}
@@ -336,6 +376,28 @@ export default function ChatFlow() {
                         Continue <span>→</span>
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* LEVEL SELECT */}
+                {q.type === 'level-select' && (
+                  <div className="level-options-grid">
+                    {q.levelOptions.map(opt => (
+                      <motion.button
+                        key={opt.value}
+                        id={`level-option-${opt.value.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`}
+                        className="level-card"
+                        onClick={() => handleAnswer(opt.value)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="level-card-top">
+                          <span className="level-card-icon">{opt.icon}</span>
+                          <span className="level-card-title">{opt.title}</span>
+                        </div>
+                        <div className="level-card-desc">{opt.desc}</div>
+                      </motion.button>
+                    ))}
                   </div>
                 )}
 

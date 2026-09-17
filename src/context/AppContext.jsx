@@ -9,6 +9,7 @@ export function AppProvider({ children }) {
   const [userProfile, setUserProfile] = useState({
     background: '',
     career: '',
+    targetLevel: 'Mastery / Job-Ready Expert',
     timePerWeek: '',
     learningStyle: '',
   });
@@ -57,7 +58,7 @@ export function AppProvider({ children }) {
   const resetApp = () => {
     setView('landing');
     setTopic('');
-    setUserProfile({ background: '', career: '', timePerWeek: '', learningStyle: '' });
+    setUserProfile({ background: '', career: '', targetLevel: 'Mastery / Job-Ready Expert', timePerWeek: '', learningStyle: '' });
     setRoadmap(null);
     setError(null);
     setIsGenerating(false);

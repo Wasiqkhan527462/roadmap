@@ -266,6 +266,7 @@ export default function RoadmapView() {
           <div className="roadmap-hero-content">
             <div className="roadmap-hero-badges">
               <span className="badge badge-indigo">📚 {topic}</span>
+              <span className="badge badge-violet">🎯 Target: {userProfile.targetLevel ? userProfile.targetLevel.split('/')[0].trim() : 'Mastery'}</span>
               <span className={`badge badge-${diffColor}`} style={
                 diffColor === 'amber' ? { background: 'rgba(245,158,11,0.15)', borderColor: 'rgba(245,158,11,0.3)', color: '#f59e0b' } :
                 diffColor === 'rose'  ? { background: 'rgba(244,63,94,0.15)',  borderColor: 'rgba(244,63,94,0.3)',  color: '#f43f5e' } : {}

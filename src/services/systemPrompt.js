@@ -14,6 +14,12 @@ MANDATORY REQUIREMENT: You MUST generate a COMPLETE roadmap with EXACTLY 5 to 7 
 - Each phase must include: id, title, duration, description, icon, color, topics (3-6 items), resources (3-5 items), milestone, and project.
 - The phases array MUST contain between 5 and 7 objects. Fewer than 5 is unacceptable.
 
+TARGET LEVEL CUSTOMIZATION:
+- If Target Level is "Basic / Beginner": Focus phases on foundational topics, syntax, basic apps, and core principles.
+- If Target Level is "Intermediate": Focus phases from foundations up to real-world application development and common libraries.
+- If Target Level is "Advanced": Focus phases on deep dive concepts, optimization, architecture, and production practices.
+- If Target Level is "Mastery / Job-Ready Expert": Cover the full A-to-Z spectrum from beginner fundamentals to industry-grade production engineering, testing, security, and portfolio projects.
+
 DURATION STRICT CONSISTENCY:
 - The sum of all phase durations MUST match the overall totalDuration!
 - For example, if totalDuration is "6 months" (~24-26 weeks total), distribute those weeks across the 5-7 phases (e.g. 3-4 weeks per phase) so their total sum equals exactly ~24-26 weeks (6 months). Do not let phase durations sum up to 30+ weeks if totalDuration is 6 months!
@@ -21,10 +27,10 @@ DURATION STRICT CONSISTENCY:
 The JSON schema:
 {
   "title": "string — e.g. 'Your Personalized Machine Learning Roadmap'",
-  "summary": "string — 2-3 sentences tailored to the user's background",
+  "summary": "string — 2-3 sentences tailored to the user's background and target level",
   "totalDuration": "string — e.g. '6 months'",
   "weeklyHours": number,
-  "difficulty": "Beginner | Intermediate | Advanced",
+  "difficulty": "Beginner | Intermediate | Advanced | Mastery",
   "phases": [
     {
       "id": number,
@@ -57,7 +63,7 @@ Phase structure rules:
 - Phase 7 (optional): Career readiness / Portfolio
 
 Content rules:
-- Tailor ALL content to the user's background, career, available time, and learning style
+- Tailor ALL content to the user's background, career, target level, available time, and learning style
 - Theory-first learners: conceptual phases early, practical later
 - Practical-first learners: start with hands-on projects immediately
 - Mixed: alternate theory and practice
@@ -69,21 +75,22 @@ AGAIN: You MUST include 5 to 7 phases. Phase durations MUST sum up to match tota
 `;
 
 export const buildUserPrompt = (topic, userProfile) => `
-Generate a COMPLETE A-to-Z personalized learning roadmap for:
+Generate a COMPLETE personalized learning roadmap for:
 
 Topic: ${topic}
 
 User Profile:
-- Educational Background: ${userProfile.background}
-- Current Career/Job: ${userProfile.career}
-- Weekly Time Available: ${userProfile.timePerWeek} hours per week
-- Learning Approach Preference: ${userProfile.learningStyle}
+- Educational Background: ${userProfile.background || 'Not specified'}
+- Current Career/Job: ${userProfile.career || 'Not specified'}
+- Target Mastery / Depth Level: ${userProfile.targetLevel || 'Mastery / Job-Ready Expert'}
+- Weekly Time Available: ${userProfile.timePerWeek || '7'} hours per week
+- Learning Approach Preference: ${userProfile.learningStyle || 'Mixed'}
 
 Requirements:
-- Include ALL phases from beginner to advanced (5 to 7 phases total)
-- Cover the complete journey from zero to job-ready
-- Tailor each phase to the user's background and time availability
-- Ensure the individual phase durations sum up exactly to the total duration of the roadmap
+- Target Depth: Tailor the depth of the roadmap specifically for the user's desired Target Level (${userProfile.targetLevel || 'Mastery / Job-Ready Expert'}).
+- Include ALL 5 to 7 phases matching this level.
+- Cover the required learning path from current knowledge to the target level.
+- Ensure the individual phase durations sum up exactly to the total duration of the roadmap.
 
 Output ONLY a valid JSON object. Start with { and end with }. Include ALL 5-7 phases.
 `;

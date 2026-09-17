@@ -6,12 +6,12 @@ const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 
 // Default model options per provider — free-tier / auto routing
 export const OPENROUTER_MODELS = [
-  { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B Instruct (Free)', free: true },
-  { id: 'openrouter/auto', label: '✨ Auto Router (Best available free model)', free: true },
-  { id: 'deepseek/deepseek-r1:free', label: 'DeepSeek R1 (Free)', free: true },
-  { id: 'google/gemma-3-27b-it:free', label: 'Gemma 3 27B (Free)', free: true },
-  { id: 'mistralai/mistral-7b-instruct:free', label: 'Mistral 7B (Free)', free: true },
-  { id: 'qwen/qwen3-30b-a3b', label: 'Qwen3 30B (Paid)', free: false },
+  { id: 'google/gemma-3-27b-it:free',             label: 'Gemma 3 27B (Free)',             free: true  },
+  { id: 'mistralai/mistral-7b-instruct:free',      label: 'Mistral 7B (Free)',              free: true  },
+  { id: 'deepseek/deepseek-r1:free',               label: 'DeepSeek R1 (Free)',             free: true  },
+  { id: 'openrouter/auto',                         label: '✨ Auto Router (Best free model)', free: true  },
+  { id: 'meta-llama/llama-3.3-70b-instruct',       label: 'Llama 3.3 70B (Paid)',           free: false },
+  { id: 'qwen/qwen3-30b-a3b',                      label: 'Qwen3 30B (Paid)',               free: false },
 ];
 
 export const GROQ_MODELS = [
@@ -29,7 +29,7 @@ const NO_JSON_FORMAT = [
 ];
 
 // Fallback model used for auto-retry on parse failure
-const FALLBACK_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
+const FALLBACK_MODEL = 'google/gemma-3-27b-it:free';
 
 /** Build request headers for a given provider + key */
 function buildHeaders(provider, apiKey) {

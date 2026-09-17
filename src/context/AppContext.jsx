@@ -22,11 +22,11 @@ export function AppProvider({ children }) {
     apiKey: import.meta.env.VITE_OPENROUTER_API_KEY || '',
     openrouterKey: import.meta.env.VITE_OPENROUTER_API_KEY || '',
     groqKey: import.meta.env.VITE_GROQ_API_KEY || '',
-    model: 'meta-llama/llama-3.3-70b-instruct:free',
+    model: 'google/gemma-3-27b-it:free',
   };
 
   // Bump this version whenever models or defaults change to clear stale caches
-  const SETTINGS_VERSION = 4;
+  const SETTINGS_VERSION = 5;
 
   // Settings stored in localStorage
   const [settings, setSettings] = useState(() => {

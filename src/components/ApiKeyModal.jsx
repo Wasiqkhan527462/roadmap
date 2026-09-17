@@ -64,7 +64,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
   const handleValidate = async () => {
     setValidating(true);
     setValidationStatus(null);
-    const targetUrl = ollamaMode === 'cloud' ? 'cloud' : localOllamaUrl.trim();
+    const targetUrl = ollamaMode === 'cloud' ? 'https://ollama.com/v1' : localOllamaUrl.trim();
     const valid = await validateApiKey(localProvider, localKey.trim(), targetUrl);
     setValidationStatus(valid ? 'valid' : 'invalid');
     setValidating(false);
@@ -73,7 +73,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
   const handleTestModel = async () => {
     if (!localModel) return;
     setModelTest({ status: 'testing', msg: 'Testing model access…' });
-    const targetUrl = ollamaMode === 'cloud' ? 'cloud' : localOllamaUrl.trim();
+    const targetUrl = ollamaMode === 'cloud' ? 'https://ollama.com/v1' : localOllamaUrl.trim();
     const result = await testModel(localProvider, localKey.trim(), localModel, targetUrl);
     if (result.ok) {
       setModelTest({ status: 'ok', msg: result.msg || '✓ Model is accessible and responding!' });
@@ -96,13 +96,16 @@ export default function ApiKeyModal({ isOpen, onClose }) {
       apiKey: localKey.trim(),
       [keyField]: localKey.trim(),
       ollamaMode,
-      ollamaUrl: ollamaMode === 'cloud' ? 'cloud' : localOllamaUrl.trim(),
+      ollamaUrl: ollamaMode === 'cloud' ? 'https://ollama.com/v1' : localOllamaUrl.trim(),
       model: localModel,
     });
     onClose();
   };
 
   const selectedModelMeta = models.find(m => m.id === localModel);
+  const isSaveDisabled =
+    (localProvider === 'groq' || localProvider === 'openrouter' || (localProvider === 'ollama' && ollamaMode === 'cloud'))
+    && !localKey.trim();
 
   if (!isOpen) return null;
 
@@ -127,7 +130,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
               <div className="modal-icon">⚙️</div>
               <div>
                 <h2 className="modal-title">AI Configuration</h2>
-                <p className="modal-subtitle">Connect your AI provider or Ollama models</p>
+                <p className="modal-subtitle">Connect your AI provider or Ollama Cloud / Local models</p>
               </div>
               <button id="modal-close-btn" className="modal-close" onClick={onClose}>✕</button>
             </div>
@@ -153,7 +156,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
                   >
                     <span className="provider-icon">🦙</span>
                     Ollama
-                    <span className="provider-badge">Free</span>
+                    <span className="provider-badge">Cloud/Local</span>
                   </button>
                   <button
                     id="provider-openrouter-btn"
@@ -178,8 +181,8 @@ export default function ApiKeyModal({ isOpen, onClose }) {
                       onClick={() => setOllamaMode('cloud')}
                     >
                       <span className="provider-icon">☁️</span>
-                      Ollama Cloud Free
-                      <span className="provider-badge">Zero Setup</span>
+                      Ollama Cloud
+                      <span className="provider-badge">API Key</span>
                     </button>
                     <button
                       type="button"
@@ -192,8 +195,8 @@ export default function ApiKeyModal({ isOpen, onClose }) {
                     </button>
                   </div>
                   {ollamaMode === 'cloud' && (
-                    <div className="form-hint" style={{ fontSize: '0.82rem', color: 'var(--accent-cyan)', background: 'rgba(6, 182, 212, 0.08)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(6, 182, 212, 0.2)', marginTop: '6px' }}>
-                      ☁️ <strong>Cloud Free Mode:</strong> No URL or API key needed! Roadster automatically runs your Ollama models in the cloud for free with zero setup.
+                    <div className="form-hint" style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                      ☁️ <strong>Ollama Cloud:</strong> No URL needed! Enter your Ollama API key below.
                     </div>
                   )}
                 </div>
@@ -219,52 +222,59 @@ export default function ApiKeyModal({ isOpen, onClose }) {
                 </div>
               )}
 
-              {/* API Key (Hidden in Ollama Cloud mode) */}
-              {(localProvider !== 'ollama' || ollamaMode === 'local') && (
-                <div className="form-group">
-                  <label className="form-label" htmlFor="api-key-input">
-                    {localProvider === 'ollama' ? 'API Key (Optional)' : 'API Key'}
-                    {localProvider !== 'ollama' && (
-                      <a
-                        href={localProvider === 'groq' ? 'https://console.groq.com/keys' : 'https://openrouter.ai/keys'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="get-key-link"
-                      >
-                        Get free key →
-                      </a>
-                    )}
-                  </label>
-                  <div className="key-input-row">
-                    <input
-                      id="api-key-input"
-                      type="password"
-                      className={`input-field key-input ${validationStatus === 'valid' ? 'valid' : validationStatus === 'invalid' ? 'invalid' : ''}`}
-                      placeholder={
-                        localProvider === 'ollama'
-                          ? 'Optional for local server…'
-                          : `Enter your ${localProvider === 'groq' ? 'Groq' : 'OpenRouter'} API key…`
-                      }
-                      value={localKey}
-                      onChange={e => { setLocalKey(e.target.value); setValidationStatus(null); }}
-                    />
-                    <button
-                      id="validate-key-btn"
-                      className="btn btn-ghost validate-btn"
-                      onClick={handleValidate}
-                      disabled={validating}
-                    >
-                      {validating ? <span className="spinner" /> : 'Test Connection'}
-                    </button>
-                  </div>
-                  {validationStatus === 'valid' && (
-                    <p className="validation-msg valid">✓ Connection verified!</p>
+              {/* API Key */}
+              <div className="form-group">
+                <label className="form-label" htmlFor="api-key-input">
+                  {localProvider === 'ollama'
+                    ? ollamaMode === 'cloud' ? 'Ollama Cloud API Key' : 'API Key (Optional)'
+                    : 'API Key'}
+                  {localProvider === 'groq' && (
+                    <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="get-key-link">
+                      Get free key →
+                    </a>
                   )}
-                  {validationStatus === 'invalid' && (
-                    <p className="validation-msg invalid">✕ Connection failed — check server and retry</p>
+                  {localProvider === 'openrouter' && (
+                    <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="get-key-link">
+                      Get free key →
+                    </a>
                   )}
+                  {localProvider === 'ollama' && ollamaMode === 'cloud' && (
+                    <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="get-key-link">
+                      Get Ollama key →
+                    </a>
+                  )}
+                </label>
+                <div className="key-input-row">
+                  <input
+                    id="api-key-input"
+                    type="password"
+                    className={`input-field key-input ${validationStatus === 'valid' ? 'valid' : validationStatus === 'invalid' ? 'invalid' : ''}`}
+                    placeholder={
+                      localProvider === 'ollama'
+                        ? ollamaMode === 'cloud'
+                          ? 'Enter your Ollama Cloud API Key…'
+                          : 'Optional for local server…'
+                        : `Enter your ${localProvider === 'groq' ? 'Groq' : 'OpenRouter'} API key…`
+                    }
+                    value={localKey}
+                    onChange={e => { setLocalKey(e.target.value); setValidationStatus(null); }}
+                  />
+                  <button
+                    id="validate-key-btn"
+                    className="btn btn-ghost validate-btn"
+                    onClick={handleValidate}
+                    disabled={validating}
+                  >
+                    {validating ? <span className="spinner" /> : 'Test Connection'}
+                  </button>
                 </div>
-              )}
+                {validationStatus === 'valid' && (
+                  <p className="validation-msg valid">✓ Key / Connection verified!</p>
+                )}
+                {validationStatus === 'invalid' && (
+                  <p className="validation-msg invalid">✕ Connection failed — check API key and retry</p>
+                )}
+              </div>
 
               {/* Model Selection + Test */}
               <div className="form-group">
@@ -329,6 +339,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
                 id="modal-save-btn"
                 className="btn btn-primary"
                 onClick={handleSave}
+                disabled={isSaveDisabled}
               >
                 Save Configuration
               </button>

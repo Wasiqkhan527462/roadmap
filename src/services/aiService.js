@@ -323,6 +323,21 @@ export async function generateRoadmap(topic, userProfile, settings) {
   try {
     return await callModel(baseURL, headers, selectedModel, topic, userProfile);
   } catch (primaryErr) {
+    // If Ollama is selected but local/cloud server is unreachable, fall back to Groq Cloud free model
+    if (provider === 'ollama') {
+      console.warn(`[Roadster] Ollama endpoint (${baseURL}) failed: ${primaryErr.message}. Auto-falling back to free Cloud Llama 3.3 model…`);
+      try {
+        const cloudBaseURL = GROQ_BASE_URL;
+        const cloudHeaders = buildHeaders('groq', settings.groqKey || settings.apiKey || '');
+        return await callModel(cloudBaseURL, cloudHeaders, GROQ_MODELS[0].id, topic, userProfile);
+      } catch (cloudErr) {
+        console.warn(`[Roadster] Groq fallback failed, trying OpenRouter auto…`, cloudErr.message);
+        const orBaseURL = OPENROUTER_BASE_URL;
+        const orHeaders = buildHeaders('openrouter', settings.openrouterKey || settings.apiKey || '');
+        return await callModel(orBaseURL, orHeaders, 'openrouter/auto', topic, userProfile);
+      }
+    }
+
     if (isRetryable(primaryErr) && selectedModel !== fallbackModel) {
       console.warn(`[Roadster] Primary model "${selectedModel}" failed (${primaryErr.message}). Auto-retrying with fallback model "${fallbackModel}"…`);
       try {

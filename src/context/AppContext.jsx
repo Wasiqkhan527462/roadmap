@@ -16,17 +16,17 @@ export function AppProvider({ children }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
 
-  // Default API keys — loaded from .env (never hardcoded in source)
+  // Default settings — Groq is used as default: fully free, fast, reliable
   const DEFAULT_SETTINGS = {
-    provider: 'openrouter',
-    apiKey: import.meta.env.VITE_OPENROUTER_API_KEY || '',
+    provider: 'groq',
+    apiKey: import.meta.env.VITE_GROQ_API_KEY || '',
     openrouterKey: import.meta.env.VITE_OPENROUTER_API_KEY || '',
     groqKey: import.meta.env.VITE_GROQ_API_KEY || '',
-    model: 'google/gemma-3-27b-it:free',
+    model: 'llama-3.3-70b-versatile',
   };
 
   // Bump this version whenever models or defaults change to clear stale caches
-  const SETTINGS_VERSION = 5;
+  const SETTINGS_VERSION = 6;
 
   // Settings stored in localStorage
   const [settings, setSettings] = useState(() => {
